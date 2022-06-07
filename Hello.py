@@ -25,7 +25,8 @@ def run():
     )
 
     st.write("# Welcome to Streamlit Friends! 👋")
-
+    st.write(f"secret - {st.secrets['DB_NAME']}")
+    st.write(f"secret - {st.secrets['DB_SECRET']}")
     st.sidebar.success("Select a demo above.")
 
     st.markdown(
