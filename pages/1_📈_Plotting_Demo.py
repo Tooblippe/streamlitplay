@@ -42,7 +42,7 @@ def plotting_demo():
     st.button("Re-run")
 
 
-st.set_page_config(page_title="Plotting Demo", page_icon="📈")
+st.set_page_config(page_title="Plotting Demo Friends", page_icon="📈")
 st.markdown("# Plotting Demo")
 st.sidebar.header("Plotting Demo")
 st.write(
