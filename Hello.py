@@ -20,33 +20,71 @@ from datetime import time
 
 LOGGER = get_logger(__name__)
 
+long_names = {
+        "H": 'Hour',
+        "D": 'Day',
+        "M": 'Month',
+        "Y": 'Year',
+}
+
+season_names = {
+        'High': [5, 6, 7],
+        'Low' : [1, 2, 3, 4, 8, 9, 10, 11, 12]
+}
+
+
+def freq_label(input):
+    return long_names[input]
+
+
+def months_chosen(month_array):
+    if len(month_array) == 1:
+        return season_names[month_array[0]]
+    else:
+        return season_names['High'] + season_names['Low']
+
+
+@st.cache
+def return_data():
+    return pd.read_csv("data/garden_route_mall.csv", parse_dates={"DateTime": [0, 1]})
+
 
 def run():
     st.set_page_config(
-        page_title="Data Viewer",
-        page_icon="👋",
+            page_title="Data Viewer",
+            page_icon="👋",
     )
 
     st.write("# Garden Route Mall")
 
-    cols = st.sidebar.multiselect('Plot', ['kW','kVA','kVAr'])
-    grouper = st.sidebar.selectbox('Agg Type', ['D','M','Y', 'H','M',])
-    month = st.sidebar.selectbox('month', [1,2,3,4,5,6,7,8,9,10,11,12])
-    df = pd.read_csv("data/garden_route_mall.csv", parse_dates={"DateTime":[0,1]})
-    df = df.set_index('DateTime')
+    # cols = st.sidebar.multiselect('Plot', ['kW', 'kVA', 'kVAr'], ['kW'])
+    season = st.sidebar.multiselect('Season', ['High', 'Low'], ['High', 'Low'])
+    sun_hours = st.sidebar.slider('Hours', 0, 23, (0, 23))
+    grouper = st.sidebar.selectbox('Agg Type', ['H', 'D', 'M', 'Y', ], format_func=freq_label)
+
+    orig_df = return_data()
+    df = orig_df.set_index('DateTime')
     df['H'] = df.index.hour
-    df['M'] = df.index.minute
     df['D'] = df.index.day
     df['M'] = df.index.month
     df['Y'] = df.index.year
+    sun_limits = ((df.index.hour >= sun_hours[0]) & (df.index.hour <= sun_hours[1]))
+    season_limits = (df.index.month.isin(months_chosen(season)))
 
-    plt_df = df.loc[df.index.month==month].groupby(by=grouper).mean()[cols]
+    plt_df = (df
+    .loc[sun_limits & season_limits & (df.kW>0)]
+    .groupby(by=grouper)
+    .agg({'kW': ['mean', 'min', 'max']})
+    )['kW']
 
+    total_energy = plt_df.sum(axis=0)*2
     st.line_chart(plt_df)
-    st.write(plt_df)
 
-    for i in range(12):
-        st.line_chart(df.groupby(by='kW')['kW'].agg(Mean='mean', Max='max'))
+    st.markdown('### Mean')
+    st.write(f'Maximum Demand {plt_df["mean"].max():,.2f} kW')
+    st.write(f'Energy {total_energy["mean"]:,.1f} kWh per day')
+
+    st.write(plt_df)
 
 
 if __name__ == "__main__":
